@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🌾 AgriSense - Smart Farming</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  body {
+    font-family: 'Roboto', sans-serif;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(to bottom right, #a8e6cf, #dcedc1);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+  .container {
+    background: #ffffffcc;
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 15px 25px rgba(0,0,0,0.2);
+    max-width: 450px;
+    width: 100%;
+    text-align: center;
+    animation: fadeIn 1s ease;
+  }
+  h1 { color: #2e7d32; margin-bottom: 5px; }
+  p { color: #555; margin-bottom: 20px; }
+  label {
+    display: block;
+    text-align: left;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #2e7d32;
+  }
+  select, input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 10px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+  }
+  button {
+    background: #2e7d32;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    font-size: 16px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
+  }
+  button:hover { background: #1b5e20; transform: scale(1.05); }
+  #output {
+    margin-top: 20px;
+    padding: 15px;
+    border-left: 5px solid #2e7d32;
+    background: #e8f5e9;
+    border-radius: 10px;
+    font-weight: bold;
+    min-height: 50px;
+    transition: all 0.5s ease;
+  }
+  @keyframes fadeIn {
+    from {opacity:0; transform: translateY(-20px);}
+    to {opacity:1; transform: translateY(0);}
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🌾 AgriSense</h1>
+  <p>AI-powered Fertilizer & Irrigation Recommender</p>
+
+  <label>Location (City/State):</label>
+  <input type="text" id="location" placeholder="e.g., Pune, Maharashtra">
+
+  <label>Crop Type:</label>
+  <select id="crop">
+    <option value="wheat">Wheat</option>
+    <option value="rice">Rice</option>
+    <option value="maize">Maize</option>
+    <option value="sugarcane">Sugarcane</option>
+    <option value="tomato">Tomato</option>
+    <option value="potato">Potato</option>
+  </select>
+
+  <label>Soil pH:</label>
+  <input type="number" step="0.1" id="ph" placeholder="e.g., 6.5">
+
+  <label>Weather:</label>
+  <select id="weather">
+    <option value="sunny">Sunny</option>
+    <option value="rain">Rain expected</option>
+  </select>
+
+  <button onclick="getRecommendation()">Get Recommendation</button>
+  <div id="output"></div>
+</div>
+
+<script>
+function getRecommendation() {
+  const location = document.getElementById("location").value.trim();
+  const crop = document.getElementById("crop").value;
+  const ph = parseFloat(document.getElementById("ph").value);
+  const weather = document.getElementById("weather").value;
+  let result = "";
+
+  // Fertilizer suggestion based on crop
+  switch(crop){
+    case "wheat": result+="➡️ Apply Urea: 30 kg/acre. "; break;
+    case "rice": result+="➡️ Apply DAP: 25 kg/acre. "; break;
+    case "maize": result+="➡️ Apply NPK: 20 kg/acre. "; break;
+    case "sugarcane": result+="➡️ Apply NPK 15-15-15: 40 kg/acre. "; break;
+    case "tomato": result+="➡️ Apply Nitrogen-rich fertilizer: 20 kg/acre. "; break;
+    case "potato": result+="➡️ Apply Potash fertilizer: 25 kg/acre. "; break;
+  }
+
+  // Irrigation advice
+  if(weather=="rain") result+="💧 Skip irrigation tomorrow.";
+  else result+="💧 Irrigate lightly tomorrow.";
+
+  // Soil adjustments
+  if(ph<6) result+=" Soil acidic → add lime.";
+  if(ph>7.5) result+=" Soil alkaline → add gypsum.";
+
+  // Location note
+  if(location) result+=` 🌍 Recommendation for ${location}.`;
+
+  document.getElementById("output").innerText = result;
+}
+</script>
+</body>
+</html>
