@@ -1,138 +1,257 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🌾 AgriSense - Smart Farming</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AgriSense — Map + Open-Meteo (Will it rain?)</title>
+
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
 <style>
-  body {
-    font-family: 'Roboto', sans-serif;
-    margin: 0;
-    padding: 0;
-    background: linear-gradient(to bottom right, #a8e6cf, #dcedc1);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-  }
-  .container {
-    background: #ffffffcc;
-    padding: 30px;
-    border-radius: 20px;
-    box-shadow: 0 15px 25px rgba(0,0,0,0.2);
-    max-width: 450px;
-    width: 100%;
-    text-align: center;
-    animation: fadeIn 1s ease;
-  }
-  h1 { color: #2e7d32; margin-bottom: 5px; }
-  p { color: #555; margin-bottom: 20px; }
-  label {
-    display: block;
-    text-align: left;
-    margin-bottom: 5px;
-    font-weight: bold;
-    color: #2e7d32;
-  }
-  select, input {
-    width: 100%;
-    padding: 10px;
-    margin-bottom: 15px;
-    border-radius: 10px;
-    border: 1px solid #ccc;
-    font-size: 14px;
-  }
-  button {
-    background: #2e7d32;
-    color: white;
-    border: none;
-    padding: 12px 20px;
-    font-size: 16px;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    width: 100%;
-  }
-  button:hover { background: #1b5e20; transform: scale(1.05); }
-  #output {
-    margin-top: 20px;
-    padding: 15px;
-    border-left: 5px solid #2e7d32;
-    background: #e8f5e9;
-    border-radius: 10px;
-    font-weight: bold;
-    min-height: 50px;
-    transition: all 0.5s ease;
-  }
-  @keyframes fadeIn {
-    from {opacity:0; transform: translateY(-20px);}
-    to {opacity:1; transform: translateY(0);}
-  }
+  body{font-family:Roboto,Arial,Helvetica; margin:0; padding:18px; background:linear-gradient(135deg,#e8f5e9,#f1f8e9);}
+  h1{color:#2e7d32;text-align:center;margin:6px 0 12px}
+  .wrap{max-width:980px;margin:0 auto;display:grid;grid-template-columns:420px 1fr;gap:18px}
+  .panel{background:#fff;padding:18px;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,0.08)}
+  label{display:block;margin-top:8px;font-weight:700;color:#2e7d32}
+  input,select{width:100%;padding:10px;margin-top:6px;border-radius:8px;border:1px solid #d7e7d7;box-sizing:border-box}
+  .controls{display:flex;gap:8px}
+  .controls input{flex:1}
+  button{padding:10px;border-radius:8px;border:none;background:#2e7d32;color:#fff;cursor:pointer;font-weight:700}
+  #map{height:72vh;border-radius:10px}
+  #output{margin-top:12px;padding:12px;border-left:6px solid #2e7d32;background:#f7fff7;border-radius:8px;font-weight:700;color:#144d2b;min-height:80px}
+  .search-results{max-height:160px;overflow:auto;margin-top:8px}
+  .result{padding:8px;border-radius:8px;border:1px solid #eee;margin-bottom:6px;cursor:pointer}
+  .result:hover{background:#f0fff0}
+  .muted{font-size:13px;color:#556;margin-top:8px}
+  .small{font-size:13px;color:#666}
+  .badge{display:inline-block;padding:6px 10px;border-radius:999px;font-weight:700}
+  .rain{background:#ffeded;color:#a10b0b;border:1px solid #f2b0b0}
+  .norain{background:#e8fff0;color:#0b6a2f;border:1px solid #bde6c9}
 </style>
 </head>
 <body>
-<div class="container">
-  <h1>🌾 AgriSense</h1>
-  <p>AI-powered Fertilizer & Irrigation Recommender</p>
+  <h1>🌾 AgriSense — Will it rain? (Open-Meteo)</h1>
 
-  <label>Location (City/State):</label>
-  <input type="text" id="location" placeholder="e.g., Pune, Maharashtra">
+  <div class="wrap">
+    <div class="panel">
+      <label>Search location</label>
+      <div class="controls">
+        <input id="searchInput" placeholder="e.g., Pune, India" />
+        <button id="btnSearch">Search</button>
+      </div>
+      <div id="searchResults" class="search-results"></div>
 
-  <label>Crop Type:</label>
-  <select id="crop">
-    <option value="wheat">Wheat</option>
-    <option value="rice">Rice</option>
-    <option value="maize">Maize</option>
-    <option value="sugarcane">Sugarcane</option>
-    <option value="tomato">Tomato</option>
-    <option value="potato">Potato</option>
-  </select>
+      <label>Selected location</label>
+      <input id="location" readonly placeholder="— click map or choose result —" />
 
-  <label>Soil pH:</label>
-  <input type="number" step="0.1" id="ph" placeholder="e.g., 6.5">
+      <label>Crop</label>
+      <select id="crop">
+        <option value="wheat">Wheat</option>
+        <option value="rice">Rice</option>
+        <option value="maize">Maize</option>
+        <option value="sugarcane">Sugarcane</option>
+        <option value="tomato">Tomato</option>
+        <option value="potato">Potato</option>
+      </select>
 
-  <label>Weather:</label>
-  <select id="weather">
-    <option value="sunny">Sunny</option>
-    <option value="rain">Rain expected</option>
-  </select>
+      <label>Soil pH</label>
+      <input id="ph" type="number" step="0.1" placeholder="e.g., 6.5" />
 
-  <button onclick="getRecommendation()">Get Recommendation</button>
-  <div id="output"></div>
-</div>
+      <label>Detected weather</label>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
+        <div id="rainBadge" class="badge norain">Detecting...</div>
+        <div id="tempInfo" class="small muted">—</div>
+      </div>
+
+      <button id="btnRecommend" style="margin-top:12px">Get Recommendation</button>
+
+      <div id="output">Click map or search a place. The app will detect if it will rain using Open-Meteo.</div>
+      <div class="muted">Uses OpenStreetMap (Nominatim) for geocoding and Open-Meteo for current weather (free, no key).</div>
+      <div class="muted" style="margin-top:8px">Open-Meteo docs: <a href="https://open-meteo.com/" target="_blank">https://open-meteo.com/</a></div>
+    </div>
+
+    <div class="panel">
+      <div id="map"></div>
+      <div class="small muted" style="margin-top:10px">Click map to pick a location; or search and choose a result.</div>
+    </div>
+  </div>
+
+<!-- Leaflet -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-function getRecommendation() {
-  const location = document.getElementById("location").value.trim();
-  const crop = document.getElementById("crop").value;
-  const ph = parseFloat(document.getElementById("ph").value);
-  const weather = document.getElementById("weather").value;
-  let result = "";
+(async function(){
+  // Initialize map
+  const map = L.map('map').setView([20.59,78.96], 5);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19, attribution:'© OpenStreetMap contributors'}).addTo(map);
 
-  // Fertilizer suggestion based on crop
-  switch(crop){
-    case "wheat": result+="➡️ Apply Urea: 30 kg/acre. "; break;
-    case "rice": result+="➡️ Apply DAP: 25 kg/acre. "; break;
-    case "maize": result+="➡️ Apply NPK: 20 kg/acre. "; break;
-    case "sugarcane": result+="➡️ Apply NPK 15-15-15: 40 kg/acre. "; break;
-    case "tomato": result+="➡️ Apply Nitrogen-rich fertilizer: 20 kg/acre. "; break;
-    case "potato": result+="➡️ Apply Potash fertilizer: 25 kg/acre. "; break;
+  let marker = null;
+  let lastCoords = null;
+  let lastWeather = null; // open-meteo current_weather object
+
+  // Helper: set or move marker
+  function setMarker(lat, lon){
+    lastCoords = {lat, lon};
+    if(marker) marker.setLatLng([lat, lon]);
+    else marker = L.marker([lat, lon]).addTo(map);
   }
 
-  // Irrigation advice
-  if(weather=="rain") result+="💧 Skip irrigation tomorrow.";
-  else result+="💧 Irrigate lightly tomorrow.";
+  // Reverse geocode (Nominatim)
+  async function reverseGeocode(lat, lon){
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`;
+    const r = await fetch(url);
+    if(!r.ok) throw new Error('Reverse geocode failed: ' + r.status);
+    return r.json();
+  }
 
-  // Soil adjustments
-  if(ph<6) result+=" Soil acidic → add lime.";
-  if(ph>7.5) result+=" Soil alkaline → add gypsum.";
+  // Search by name (Nominatim)
+  async function searchPlace(q){
+    const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(q)}&limit=8`;
+    const r = await fetch(url);
+    if(!r.ok) throw new Error('Search failed: ' + r.status);
+    return r.json();
+  }
 
-  // Location note
-  if(location) result+=` 🌍 Recommendation for ${location}.`;
+  // Fetch current weather from Open-Meteo (no key)
+  async function fetchWeather(lat, lon){
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`;
+    const r = await fetch(url);
+    if(!r.ok) throw new Error('Weather fetch failed: ' + r.status);
+    return r.json();
+  }
 
-  document.getElementById("output").innerText = result;
-}
+  // Apply weather to UI: sets lastWeather and updates badge
+  function applyWeather(cw){
+    lastWeather = cw;
+    const code = cw.weathercode;
+    const temp = cw.temperature;
+    // Set of Open-Meteo weathercodes that indicate precipitation / thunder
+    const rainCodes = new Set([51,52,53,55,56,57,61,63,65,66,67,80,81,82,95,96,99]);
+    const willRain = rainCodes.has(code);
+    const badge = document.getElementById('rainBadge');
+    const tempInfo = document.getElementById('tempInfo');
+
+    if(willRain){
+      badge.className = 'badge rain';
+      badge.innerText = 'Rain expected';
+    } else {
+      badge.className = 'badge norain';
+      badge.innerText = 'No rain expected';
+    }
+    tempInfo.innerText = `${temp} °C • code ${code}`;
+    document.getElementById('output').innerText = `Weather detected: ${temp}°C, code ${code} — ${willRain? 'rain likely' : 'no rain'}; click "Get Recommendation" to see advice.`;
+  }
+
+  // When a location is picked (lat, lon), reverse geocode and fetch weather
+  async function onPick(lat, lon, displayFallback){
+    try {
+      setMarker(lat, lon);
+      map.panTo([lat, lon]);
+      document.getElementById('location').value = 'Loading location...';
+      document.getElementById('rainBadge').innerText = 'Detecting...';
+      document.getElementById('tempInfo').innerText = '';
+      document.getElementById('output').innerText = 'Fetching weather...';
+
+      // reverse geocode
+      let geo = null;
+      try { geo = await reverseGeocode(lat, lon); } catch(e){ geo = null; }
+      const name = geo && geo.display_name ? geo.display_name : (displayFallback || `${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+      document.getElementById('location').value = name;
+
+      // fetch weather
+      const res = await fetchWeather(lat, lon);
+      if(res && res.current_weather) applyWeather(res.current_weather);
+      else document.getElementById('output').innerText = 'Weather unavailable for this location.';
+    } catch(err){
+      console.error(err);
+      document.getElementById('output').innerText = 'Error: ' + (err.message || err);
+    }
+  }
+
+  // Map click -> pick location
+  map.on('click', e => onPick(e.latlng.lat, e.latlng.lng));
+
+  // Search handler
+  document.getElementById('btnSearch').addEventListener('click', async ()=>{
+    const q = document.getElementById('searchInput').value.trim();
+    const searchResults = document.getElementById('searchResults');
+    searchResults.innerHTML = '';
+    if(!q){ alert('Type a place name to search'); return; }
+    searchResults.innerHTML = '<div class="small muted">Searching...</div>';
+    try {
+      const arr = await searchPlace(q);
+      if(!arr || arr.length === 0){ searchResults.innerHTML = '<div class="small muted">No results</div>'; return; }
+      searchResults.innerHTML = '';
+      for(const item of arr){
+        const div = document.createElement('div');
+        div.className = 'result';
+        div.innerHTML = `<div style="font-weight:700">${item.display_name.split(',')[0]}</div><div class="small muted">${item.display_name}</div>`;
+        div.onclick = () => { searchResults.innerHTML = ''; onPick(parseFloat(item.lat), parseFloat(item.lon), item.display_name); };
+        searchResults.appendChild(div);
+      }
+    } catch(err){
+      console.error(err);
+      searchResults.innerHTML = 'Search error: ' + (err.message||err);
+    }
+  });
+
+  // Recommendation logic uses lastWeather (detected) + crop + pH
+  document.getElementById('btnRecommend').addEventListener('click', ()=>{
+    const location = document.getElementById('location').value || 'selected location';
+    const crop = document.getElementById('crop').value;
+    const phVal = document.getElementById('ph').value;
+    const ph = phVal === '' ? null : parseFloat(phVal);
+
+    let fert = '';
+    switch(crop){
+      case 'wheat': fert='➡️ Apply Urea: 30 kg/acre. '; break;
+      case 'rice': fert='➡️ Apply DAP: 25 kg/acre. '; break;
+      case 'maize': fert='➡️ Apply NPK: 20 kg/acre. '; break;
+      case 'sugarcane': fert='➡️ Apply NPK 15-15-15: 40 kg/acre. '; break;
+      case 'tomato': fert='➡️ Apply Nitrogen-rich fertilizer: 20 kg/acre. '; break;
+      case 'potato': fert='➡️ Apply Potash fertilizer: 25 kg/acre. '; break;
+      default: fert='➡️ Apply Balanced NPK: 20 kg/acre. '; break;
+    }
+
+    // Decide irrigation using lastWeather
+    let irrigationNote = '💧 Weather unknown — please pick location or wait for detection.';
+    if(lastWeather){
+      const code = lastWeather.weathercode;
+      const rainSet = new Set([51,52,53,55,56,57,61,63,65,66,67,80,81,82,95,96,99]);
+      if(rainSet.has(code)) irrigationNote = '☔ Rain expected — skip irrigation tomorrow.';
+      else irrigationNote = '💧 No rain expected — irrigate lightly tomorrow.';
+    }
+
+    // soil notes
+    let soilNote = '';
+    if(ph !== null) {
+      if(ph < 6) soilNote = ' Soil acidic → add lime.';
+      else if(ph > 7.5) soilNote = ' Soil alkaline → add gypsum.';
+      else soilNote = ' Soil pH near optimal.';
+    } else soilNote = ' Soil pH not provided.';
+
+    // Will it rain quick text
+    let rainText = 'Unknown';
+    if(lastWeather){
+      const code = lastWeather.weathercode;
+      const rainSet = new Set([51,52,53,55,56,57,61,63,65,66,67,80,81,82,95,96,99]);
+      rainText = rainSet.has(code) ? 'Yes' : 'No';
+    }
+
+    const final = `${fert}${irrigationNote}${soilNote} 🌍 Recommendation for ${location}. Will it rain? ${rainText}.`;
+    document.getElementById('output').innerText = final;
+  });
+
+  // try centering on user location
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(pos => {
+      map.setView([pos.coords.latitude, pos.coords.longitude], 10);
+      // optionally auto-pick:
+      // onPick(pos.coords.latitude, pos.coords.longitude);
+    }, ()=>{ /* ignore */ });
+  }
+})();
 </script>
 </body>
 </html>
